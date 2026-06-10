@@ -2,8 +2,11 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
+import errorHandler from "./middlewares/error.middleware.js";
+
 const app = express();
 
+//Normal middlewares
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
@@ -23,9 +26,10 @@ app.use(
     limit: "16kb",
   })
 );
-
 app.use(cookieParser());
-
 app.use(express.static("public"));
+
+//error middleware
+app.use(errorHandler);
 
 export default app;
