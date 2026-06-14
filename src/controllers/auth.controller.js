@@ -4,32 +4,30 @@ import ApiResponse from "../utils/ApiResponse.js";
 
 import { User } from "../models/user.model.js";
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+};
+
 const generateAccessAndRefreshTokens = async (userId) => {
-  try {
-    //Find user from db
-    const user = await User.findById(userId);
+  //Find user from db
+  const user = await User.findById(userId);
 
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
-
-    //Generate access and refresh token
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
-
-    //Save refreshToken
-
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
-
-    //return accessToken and refreshToken
-    return { accessToken, refreshToken };
-  } catch (error) {
-    throw new ApiError(
-      500,
-      "Something went wrong while generating referesh and access token"
-    );
+  if (!user) {
+    throw new ApiError(404, "User not found");
   }
+
+  //Generate access and refresh token
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  //Save refreshToken
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  //return accessToken and refreshToken
+  return { accessToken, refreshToken };
 };
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -60,7 +58,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await User.create({
     fullName,
     email,
-    username: username.toLowerCase(),
+    username,
     password,
   });
 
@@ -83,17 +81,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to fetch created user");
   }
 
-  // Set cookies
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-  };
   // return res
 
   res
     .status(201)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
     .json(
       new ApiResponse(
         201,
@@ -120,7 +113,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { input, password } = req.body;
 
-  if (!input || !password) {
+  if (![input, password].every((field) => field?.trim())) {
     throw new ApiError(400, "Username/email and password are required");
   }
 
@@ -150,16 +143,10 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to fetch the user");
   }
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
-
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
     .json(
       new ApiResponse(
         200,
@@ -184,12 +171,6 @@ const logoutUser = asyncHandler(async (req, res) => {
       refreshToken: 1,
     },
   });
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
 
   return res
     .status(200)
