@@ -102,7 +102,7 @@ const registerUser = asyncHandler(async (req, res) => {
           accessToken,
           refreshToken,
         },
-        "User registered successfully"
+        "Registered successfully"
       )
     );
 });
@@ -168,7 +168,7 @@ const loginUser = asyncHandler(async (req, res) => {
           accessToken,
           refreshToken,
         },
-        "User successfully logged in"
+        "Logged in successfully"
       )
     );
 });
@@ -178,6 +178,24 @@ const logoutUser = asyncHandler(async (req, res) => {
   // Remove the refreshToken from the database
   // Clear the cookies of access and refresh tokens
   // Return a success response
+
+  await User.findByIdAndUpdate(req.user._id, {
+    $unset: {
+      refreshToken: 1,
+    },
+  });
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .json(new ApiResponse(200, {}, "Logged out successfully"));
 });
 
-export { registerUser, loginUser };
+export { registerUser, loginUser, logoutUser };
