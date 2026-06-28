@@ -2,6 +2,10 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -124,5 +128,131 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, updatedUser, "Account details updated successfully")
+    );
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  // Get avatar file path from the request
+  // Validate avatar file
+  // Fetch the authenticated user
+  // Upload the new avatar to Cloudinary
+  // Store the previous avatar publicId
+  // Update the user's avatar details
+  // Save the user
+  // Try deleting the previous avatar from Cloudinary
+  // Fetch the updated user without sensitive fields
+  // Return success response
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const uploadedAvatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!uploadedAvatar?.secure_url || !uploadedAvatar?.public_id) {
+    throw new ApiError(500, "Failed to upload avatar");
+  }
+
+  const oldAvatarPublicId = user.avatar?.publicId;
+
+  user.avatar = {
+    url: uploadedAvatar.secure_url,
+    publicId: uploadedAvatar.public_id,
+  };
+
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    if (oldAvatarPublicId) {
+      await deleteFromCloudinary(oldAvatarPublicId);
+    }
+  } catch (error) {
+    console.error(
+      "Failed to delete old avatar from Cloudinary:",
+      error.message
+    );
+  }
+
+  const updatedUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  if (!updatedUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Avatar updated successfully"));
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  // Check if cover image file exists
+  // Fetch the authenticated user
+  // Upload the new cover image to Cloudinary
+  // Store the previous cover image publicId
+  // Update the user's cover image details
+  // Save the user
+  // Try deleting the previous cover image from Cloudinary
+  // Fetch the updated user without sensitive fields
+  // Return success response
+
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover image file is required");
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const uploadedCoverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!uploadedCoverImage?.secure_url || !uploadedCoverImage?.public_id) {
+    throw new ApiError(500, "Failed to upload cover image");
+  }
+
+  const oldCoverImagePublicId = user.coverImage?.publicId;
+
+  user.coverImage = {
+    url: uploadedCoverImage.secure_url,
+    publicId: uploadedCoverImage.public_id,
+  };
+
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    if (oldCoverImagePublicId) {
+      await deleteFromCloudinary(oldCoverImagePublicId);
+    }
+  } catch (error) {
+    console.error(
+      "Failed to delete old cover image from Cloudinary:",
+      error.message
+    );
+  }
+
+  const updatedUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  if (!updatedUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "Cover image updated successfully")
     );
 });
