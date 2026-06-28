@@ -31,13 +31,27 @@ const userSchema = new Schema(
       maxlength: 300,
     },
     avatar: {
-      type: String,
-      default: "", // cloudinary url
+      url: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
     },
+
     coverImage: {
-      type: String,
-      default: "", // cloudinary url
+      url: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
     },
+
     password: {
       type: String,
       required: [true, "Password is required"],
